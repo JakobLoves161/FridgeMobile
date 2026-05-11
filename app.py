@@ -209,31 +209,32 @@ html, body, [class*="css"] {
     margin: 0;
 }
 
-/* ── Bottom Navigation ── */
-.bottom-nav {
+/* ── Bottom Navigation Shell (visual only) ── */
+.bottom-nav-shell {
     position: fixed;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
     width: 430px;
+    max-width: 100vw;
     background: white;
     border-top: 1px solid #E8EAF6;
     display: flex;
     align-items: center;
     justify-content: space-around;
     padding: 10px 0 20px;
-    z-index: 999;
+    z-index: 998;
     box-shadow: 0 -4px 20px rgba(44,63,214,0.08);
+    pointer-events: none;
 }
-.nav-item {
+.nav-slot {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    cursor: pointer;
     flex: 1;
 }
-.nav-icon {
+.nav-icon-wrap {
     width: 40px;
     height: 40px;
     border-radius: 14px;
@@ -241,26 +242,23 @@ html, body, [class*="css"] {
     align-items: center;
     justify-content: center;
     font-size: 1.2rem;
-    transition: background 0.2s;
 }
-.nav-item.active .nav-icon {
-    background: #2C3FD6;
+.nav-slot.active .nav-icon-wrap {
+    background: #EEF1FF;
 }
-.nav-item .nav-label {
+.nav-slot .nav-label {
     font-size: 0.65rem;
     font-weight: 700;
     color: #9aa0b8;
 }
-.nav-item.active .nav-label {
+.nav-slot.active .nav-label {
     color: #2C3FD6;
 }
-
-/* ── FAB ── */
-.fab-wrap {
+.nav-slot.center {
     position: relative;
-    top: -20px;
+    top: -14px;
 }
-.fab {
+.fab-visual {
     width: 56px;
     height: 56px;
     border-radius: 18px;
@@ -271,7 +269,37 @@ html, body, [class*="css"] {
     font-size: 1.6rem;
     color: white;
     box-shadow: 0 6px 20px rgba(244,160,36,0.45);
-    cursor: pointer;
+}
+
+/* ── Nav button overlay (invisible real buttons) ── */
+div[data-testid="stHorizontalBlock"]:has(button[kind="secondary"][data-testid*="nav_"]),
+div[data-testid="stHorizontalBlock"]:last-of-type {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 430px !important;
+    max-width: 100vw !important;
+    z-index: 999 !important;
+    padding: 10px 0 20px !important;
+    background: transparent !important;
+    gap: 0 !important;
+}
+
+/* Make nav buttons invisible but clickable */
+button[key="nav_inventar"],
+button[key="nav_fab"],
+button[key="nav_scan"] {
+    opacity: 0 !important;
+    height: 70px !important;
+    cursor: pointer !important;
+}
+
+/* Universal nav button invisibility via data-testid */
+[data-testid="stBaseButton-secondary"]:has(+ [data-testid]),
+.nav-btn-overlay button {
+    opacity: 0 !important;
+    height: 70px !important;
 }
 
 /* ── Scan Page ── */
@@ -512,34 +540,43 @@ def food_emoji(name):
     return "🛒"
 
 # -----------------------------
-# BOTTOM NAV (rendered via HTML + JS nav buttons)
+# BOTTOM NAV — real st.buttons styled as bottom bar
 # -----------------------------
 def bottom_nav(active):
     inv_active = "active" if active == "inventar" else ""
     scan_active = "active" if active == "scan" else ""
 
+    # Outer fixed bar (pure visual shell)
     st.markdown(f"""
-    <div class="bottom-nav">
-        <div class="nav-item {inv_active}" onclick="window.location.href='?page=inventar'">
-            <div class="nav-icon">{'🏠' if inv_active else '🏠'}</div>
+    <div class="bottom-nav-shell">
+        <div class="nav-slot left {inv_active}">
+            <div class="nav-icon-wrap">🏠</div>
             <span class="nav-label">Inventar</span>
         </div>
-        <div class="nav-item fab-wrap" onclick="window.location.href='?page=scan'">
-            <div class="fab">＋</div>
+        <div class="nav-slot center">
+            <div class="fab-visual">＋</div>
         </div>
-        <div class="nav-item {scan_active}" onclick="window.location.href='?page=scan'">
-            <div class="nav-icon">{'📷' if scan_active else '📷'}</div>
+        <div class="nav-slot right {scan_active}">
+            <div class="nav-icon-wrap">📷</div>
             <span class="nav-label">Scannen</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# -----------------------------
-# PAGE ROUTING via query params
-# -----------------------------
-params = st.query_params
-if "page" in params:
-    st.session_state.page = params["page"]
+    # Real invisible Streamlit buttons overlaid on top
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button("Inventar", key="nav_inventar", use_container_width=True):
+            st.session_state.page = "inventar"
+            st.rerun()
+    with col2:
+        if st.button("＋", key="nav_fab", use_container_width=True):
+            st.session_state.page = "scan"
+            st.rerun()
+    with col3:
+        if st.button("Scannen", key="nav_scan", use_container_width=True):
+            st.session_state.page = "scan"
+            st.rerun()
 
 # -----------------------------
 # PAGE: INVENTAR
